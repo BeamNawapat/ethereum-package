@@ -310,6 +310,7 @@ def input_parser(plan, input_args):
             num_validator_keys_per_node=result["network_params"][
                 "num_validator_keys_per_node"
             ],
+            network_name=result["network_params"]["network_name"],
             network_id=result["network_params"]["network_id"],
             deposit_contract_address=result["network_params"][
                 "deposit_contract_address"
@@ -932,6 +933,7 @@ def default_network_params():
 def default_minimal_network_params():
     return {
         "network": "kurtosis",
+        "network_name": "kurtosis",
         "network_id": "3151908",
         "deposit_contract_address": "0x4242424242424242424242424242424242424242",
         "seconds_per_slot": 6,

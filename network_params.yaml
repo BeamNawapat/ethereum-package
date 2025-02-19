@@ -67,6 +67,7 @@ participants:
     builder_network_params: null
     keymanager_enabled: false
 network_params:
+  network_name: kurtosis
   network: kurtosis
   network_id: "3151908"
   deposit_contract_address: "0x4242424242424242424242424242424242424242"

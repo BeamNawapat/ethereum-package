@@ -223,7 +223,17 @@ def get_config_frontend(
     network_params,
     node_selectors,
     blockscout_service,
-):
+):    
+    # Get the blockscout service's internal hostname and port
+    blockscout_internal_url = "{}:{}".format(
+        blockscout_service.hostname,
+        blockscout_service.ports["http"].number
+    )
+    
+    # Log the URLs for debugging
+    plan.print("Blockscout internal URL: " + blockscout_internal_url)
+    plan.print("EL Client RPC URL: " + el_client_rpc_url)
+
     return ServiceConfig(
         image=shared_utils.docker_cache_image_calc(
             docker_cache_params,
@@ -233,11 +243,11 @@ def get_config_frontend(
         env_vars={
             "NEXT_PUBLIC_API_PROTOCOL": "http",
             "NEXT_PUBLIC_API_WEBSOCKET_PROTOCOL": "ws",
-            "NEXT_PUBLIC_NETWORK_NAME": "Kurtosis",
+            "NEXT_PUBLIC_NETWORK_NAME": network_params.network_name,
             "NEXT_PUBLIC_NETWORK_ID": network_params.network_id,
-            "NEXT_PUBLIC_NETWORK_RPC_URL": "0.0.0.0"+":"+USED_PORTS,
-            "NEXT_PUBLIC_APP_HOST": "0.0.0.0",
-            "NEXT_PUBLIC_API_HOST": "0.0.0.0"+":"+USED_PORTS,
+            "NEXT_PUBLIC_NETWORK_RPC_URL": el_client_rpc_url,
+            "NEXT_PUBLIC_APP_HOST": blockscout_internal_url,
+            "NEXT_PUBLIC_API_HOST": blockscout_internal_url,
             "NEXT_PUBLIC_AD_BANNER_PROVIDER": "none",
             "NEXT_PUBLIC_AD_TEXT_PROVIDER": "none",
             "NEXT_PUBLIC_IS_TESTNET": "true",
