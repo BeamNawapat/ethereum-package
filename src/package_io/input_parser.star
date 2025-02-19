@@ -892,6 +892,7 @@ def default_input_args(input_args):
 def default_network_params():
     return {
         "network": "kurtosis",
+        "network_name": "kurtosis",
         "network_id": "3151908",
         "deposit_contract_address": "0x4242424242424242424242424242424242424242",
         "seconds_per_slot": 12,
