@@ -69,6 +69,7 @@ participants:
 network_params:
   network: kurtosis
   network_id: "3151908"
+  nat_exit_ip: KURTOSIS_IP_ADDR_PLACEHOLDER
   deposit_contract_address: "0x4242424242424242424242424242424242424242"
   seconds_per_slot: 12
   num_validator_keys_per_node: 64
