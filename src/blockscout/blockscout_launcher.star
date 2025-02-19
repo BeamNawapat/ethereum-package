@@ -235,11 +235,9 @@ def get_config_frontend(
             "NEXT_PUBLIC_API_WEBSOCKET_PROTOCOL": "ws",
             "NEXT_PUBLIC_NETWORK_NAME": "Kurtosis",
             "NEXT_PUBLIC_NETWORK_ID": network_params.network_id,
-            "NEXT_PUBLIC_NETWORK_RPC_URL": el_client_rpc_url,
+            "NEXT_PUBLIC_NETWORK_RPC_URL": "0.0.0.0"+":"+USED_PORTS,
             "NEXT_PUBLIC_APP_HOST": "0.0.0.0",
-            "NEXT_PUBLIC_API_HOST": blockscout_service.ip_address
-            + ":"
-            + str(blockscout_service.ports["http"].number),
+            "NEXT_PUBLIC_API_HOST": "0.0.0.0"+":"+USED_PORTS,
             "NEXT_PUBLIC_AD_BANNER_PROVIDER": "none",
             "NEXT_PUBLIC_AD_TEXT_PROVIDER": "none",
             "NEXT_PUBLIC_IS_TESTNET": "true",
