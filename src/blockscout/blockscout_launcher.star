@@ -223,31 +223,23 @@ def get_config_frontend(
     network_params,
     node_selectors,
     blockscout_service,
-):    
-    # Get the blockscout service's internal hostname and port
-    blockscout_internal_url = "{}:{}".format(
-        blockscout_service.hostname,
-        blockscout_service.ports["http"].number
-    )
-    
-    # Log the URLs for debugging
-    plan.print("Blockscout internal URL: " + blockscout_internal_url)
-    plan.print("EL Client RPC URL: " + el_client_rpc_url)
-
+):
     return ServiceConfig(
         image=shared_utils.docker_cache_image_calc(
             docker_cache_params,
             blockscout_params.frontend_image,
         ),
         ports=FRONTEND_USED_PORTS,
+        public_ports=FRONTEND_USED_PORTS,
         env_vars={
             "NEXT_PUBLIC_API_PROTOCOL": "http",
             "NEXT_PUBLIC_API_WEBSOCKET_PROTOCOL": "ws",
-            "NEXT_PUBLIC_NETWORK_NAME": network_params.network_name,
+            "NEXT_PUBLIC_NETWORK_NAME": "Kurtosis",
             "NEXT_PUBLIC_NETWORK_ID": network_params.network_id,
             "NEXT_PUBLIC_NETWORK_RPC_URL": el_client_rpc_url,
-            "NEXT_PUBLIC_APP_HOST": blockscout_internal_url,
-            "NEXT_PUBLIC_API_HOST": blockscout_internal_url,
+            "NEXT_PUBLIC_API_HOST": blockscout_service.ip_address
+            + ":"
+            + str(blockscout_service.ports["http"].number),
             "NEXT_PUBLIC_AD_BANNER_PROVIDER": "none",
             "NEXT_PUBLIC_AD_TEXT_PROVIDER": "none",
             "NEXT_PUBLIC_IS_TESTNET": "true",
@@ -255,6 +247,12 @@ def get_config_frontend(
             "NEXT_PUBLIC_HAS_BEACON_CHAIN": "true",
             "NEXT_PUBLIC_NETWORK_VERIFICATION_TYPE": "validation",
             "NEXT_PUBLIC_NETWORK_ICON": "https://ethpandaops.io/logo.png",
+            # "NEXT_PUBLIC_APP_HOST": "0.0.0.0",
+            "NEXT_PUBLIC_APP_PROTOCOL": "http",
+            "NEXT_PUBLIC_APP_HOST": "127.0.0.1",
+            "NEXT_PUBLIC_APP_PORT": str(HTTP_PORT_NUMBER_FRONTEND),
+            "NEXT_PUBLIC_USE_NEXT_JS_PROXY": "true",
+            "PORT": str(HTTP_PORT_NUMBER_FRONTEND),
         },
         min_cpu=BLOCKSCOUT_MIN_CPU,
         max_cpu=BLOCKSCOUT_MAX_CPU,
