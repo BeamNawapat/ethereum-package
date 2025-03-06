@@ -249,7 +249,7 @@ def get_config_frontend(
             "NEXT_PUBLIC_NETWORK_ICON": "https://ethpandaops.io/logo.png",
             # "NEXT_PUBLIC_APP_HOST": "0.0.0.0",
             "NEXT_PUBLIC_APP_PROTOCOL": "http",
-            "NEXT_PUBLIC_APP_HOST": "127.0.0.1",
+            "NEXT_PUBLIC_APP_HOST": "0.0.0.0",
             "NEXT_PUBLIC_APP_PORT": str(HTTP_PORT_NUMBER_FRONTEND),
             "NEXT_PUBLIC_USE_NEXT_JS_PROXY": "true",
             "PORT": str(HTTP_PORT_NUMBER_FRONTEND),
