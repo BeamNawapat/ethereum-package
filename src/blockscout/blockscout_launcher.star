@@ -43,84 +43,92 @@ FRONTEND_USED_PORTS = {
     )
 }
 
-def setup_port_publishing(port_publisher, service_index, port_offset):
-    """Helper function to consistently set up port publishing for services
-    
-    Args:
-        port_publisher: The port publisher configuration
-        service_index: The index of the main service
-        port_offset: An offset for the specific component of a service
-        
-    Returns:
-        A tuple with (use_nat_ip, nat_exit_ip, public_port, public_ports_config)
-    """
-    nat_exit_ip = None
-    additional_services_enabled = False
-    use_nat_ip = False
-    
-    # Safely extract nat_exit_ip if available
-    try:
-        nat_exit_ip = port_publisher.nat_exit_ip
-    except (AttributeError, TypeError):
-        pass
-    
-    # Safely check if additional services are enabled
-    try:
-        additional_services_enabled = port_publisher.additional_services.enabled
-    except (AttributeError, TypeError):
-        pass
-    
-    use_nat_ip = nat_exit_ip != None and additional_services_enabled
-    
-    public_port = None
-    public_ports_config = {}
-    
-    if use_nat_ip and additional_services_enabled:
-        # Get the base port safely
-        base_port = 36000  # Default value
-        try:
-            base_port = port_publisher.additional_services.public_port_start
-        except (AttributeError, TypeError):
-            pass
-        
-        public_port = base_port + service_index + port_offset
-        
-        public_ports_config = {
-            constants.HTTP_PORT_ID: shared_utils.new_port_spec(
-                public_port,
-                shared_utils.TCP_PROTOCOL,
-                shared_utils.HTTP_APPLICATION_PROTOCOL,
-            )
-        }
-    
-    return (use_nat_ip, nat_exit_ip, public_port, public_ports_config)
 
+def launch_blockscout(
+    plan,
+    el_contexts,
+    persistent,
+    global_node_selectors,
+    port_publisher,
+    additional_service_index,
+    docker_cache_params,
+    blockscout_params,
+    network_params,
+):
+    postgres_output = postgres.run(
+        plan,
+        service_name="{}-postgres".format(SERVICE_NAME_BLOCKSCOUT),
+        database="blockscout",
+        extra_configs=["max_connections=1000"],
+        persistent=persistent,
+        node_selectors=global_node_selectors,
+        image=shared_utils.docker_cache_image_calc(docker_cache_params, POSTGRES_IMAGE),
+    )
 
-def get_service_url(service, port_id, use_nat_ip, nat_exit_ip, public_port):
-    """Helper function to generate the appropriate URL for a service
-    
-    Args:
-        service: The service object
-        port_id: The port ID to use
-        use_nat_ip: Boolean indicating if NAT IP should be used
-        nat_exit_ip: The NAT exit IP
-        public_port: The public port number
-        
-    Returns:
-        A formatted URL string
-    """
-    host = nat_exit_ip if use_nat_ip else service.hostname
-    port = public_port if use_nat_ip else service.ports[port_id].number
-    
-    return "http://{}:{}/".format(host, port)
+    el_context = el_contexts[0]
+    el_client_rpc_url = "http://{}:{}/".format(
+        el_context.ip_addr, el_context.rpc_port_num
+    )
+    el_client_name = el_context.client_name
+
+    config_verif = get_config_verif(
+        global_node_selectors,
+        port_publisher,
+        additional_service_index,
+        docker_cache_params,
+        blockscout_params,
+    )
+    verif_service_name = "{}-verif".format(SERVICE_NAME_BLOCKSCOUT)
+    verif_service = plan.add_service(verif_service_name, config_verif)
+    verif_url = "http://{}:{}/".format(
+        verif_service.hostname, verif_service.ports["http"].number
+    )
+
+    config_backend = get_config_backend(
+        postgres_output,
+        el_client_rpc_url,
+        verif_url,
+        el_client_name,
+        global_node_selectors,
+        port_publisher,
+        additional_service_index,
+        docker_cache_params,
+        blockscout_params,
+    )
+    blockscout_service = plan.add_service(SERVICE_NAME_BLOCKSCOUT, config_backend)
+    plan.print(blockscout_service)
+
+    blockscout_url = "http://{}:{}".format(
+        blockscout_service.hostname, blockscout_service.ports["http"].number
+    )
+
+    config_frontend = get_config_frontend(
+        plan,
+        el_client_rpc_url,
+        docker_cache_params,
+        blockscout_params,
+        network_params,
+        global_node_selectors,
+        blockscout_service,
+    )
+    plan.add_service(SERVICE_NAME_FRONTEND, config_frontend)
+    return blockscout_url
 
 
 def get_config_verif(
     node_selectors,
-    public_ports,
+    port_publisher,
+    additional_service_index,
     docker_cache_params,
     blockscout_params,
 ):
+    public_ports = shared_utils.get_additional_service_standard_public_port(
+        port_publisher,
+        constants.HTTP_PORT_ID,
+        additional_service_index,
+        0,
+    )
+
     return ServiceConfig(
         image=shared_utils.docker_cache_image_calc(
             docker_cache_params,
@@ -147,7 +155,8 @@ def get_config_backend(
     verif_url,
     el_client_name,
     node_selectors,
-    public_ports,
+    port_publisher,
+    additional_service_index,
     docker_cache_params,
     blockscout_params,
 ):
@@ -158,6 +167,13 @@ def get_config_backend(
         hostname=postgres_output.service.hostname,
         port=postgres_output.port.number,
         database=postgres_output.database,
+    )
+
+    public_ports = shared_utils.get_additional_service_standard_public_port(
+        port_publisher,
+        constants.HTTP_PORT_ID,
+        additional_service_index,
+        1,
     )
 
     return ServiceConfig(
@@ -205,31 +221,23 @@ def get_config_frontend(
     docker_cache_params,
     blockscout_params,
     network_params,
-    global_node_selectors,
+    node_selectors,
     blockscout_service,
-    blockscout_url,
-    public_ports,
 ):
-    # Parse the blockscout URL to get host and port
-    # blockscout_url format is "http://host:port/"
-    url_parts = blockscout_url.split("://")[1].split(":")
-    api_host = url_parts[0]
-    api_port = url_parts[1].strip("/")
-
     return ServiceConfig(
         image=shared_utils.docker_cache_image_calc(
             docker_cache_params,
             blockscout_params.frontend_image,
         ),
         ports=FRONTEND_USED_PORTS,
-        public_ports=public_ports,
+        public_ports=FRONTEND_USED_PORTS,
         env_vars={
             "NEXT_PUBLIC_API_PROTOCOL": "http",
             "NEXT_PUBLIC_API_WEBSOCKET_PROTOCOL": "ws",
-            "NEXT_PUBLIC_NETWORK_NAME": "Kurtosis",
+            "NEXT_PUBLIC_NETWORK_NAME": network_params.network_name,
             "NEXT_PUBLIC_NETWORK_ID": network_params.network_id,
             "NEXT_PUBLIC_NETWORK_RPC_URL": el_client_rpc_url,
-            "NEXT_PUBLIC_API_HOST": api_host + ":" + api_port,
+            "NEXT_PUBLIC_API_HOST": "0.0.0.0:{}".format(HTTP_PORT_NUMBER),
             "NEXT_PUBLIC_AD_BANNER_PROVIDER": "none",
             "NEXT_PUBLIC_AD_TEXT_PROVIDER": "none",
             "NEXT_PUBLIC_IS_TESTNET": "true",
@@ -237,8 +245,9 @@ def get_config_frontend(
             "NEXT_PUBLIC_HAS_BEACON_CHAIN": "true",
             "NEXT_PUBLIC_NETWORK_VERIFICATION_TYPE": "validation",
             "NEXT_PUBLIC_NETWORK_ICON": "https://ethpandaops.io/logo.png",
+            "NEXT_PUBLIC_APP_HOST": "0.0.0.0",
             "NEXT_PUBLIC_APP_PROTOCOL": "http",
-            "NEXT_PUBLIC_APP_HOST": "0.0.0.0", 
+            # "NEXT_PUBLIC_APP_HOST": "127.0.0.1",
             "NEXT_PUBLIC_APP_PORT": str(HTTP_PORT_NUMBER_FRONTEND),
             "NEXT_PUBLIC_USE_NEXT_JS_PROXY": "true",
             "PORT": str(HTTP_PORT_NUMBER_FRONTEND),
@@ -247,108 +256,5 @@ def get_config_frontend(
         max_cpu=BLOCKSCOUT_MAX_CPU,
         min_memory=BLOCKSCOUT_MIN_MEMORY,
         max_memory=BLOCKSCOUT_MAX_MEMORY,
-        node_selectors=global_node_selectors,
+        node_selectors=node_selectors,
     )
-
-
-def launch_blockscout(
-    plan,
-    el_contexts,
-    persistent,
-    global_node_selectors,
-    port_publisher,
-    additional_service_index,
-    docker_cache_params,
-    blockscout_params,
-    network_params,
-):
-    # Start postgres database
-    postgres_output = postgres.run(
-        plan,
-        service_name="{}-postgres".format(SERVICE_NAME_BLOCKSCOUT),
-        database="blockscout",
-        extra_configs=["max_connections=1000"],
-        persistent=persistent,
-        node_selectors=global_node_selectors,
-        image=shared_utils.docker_cache_image_calc(docker_cache_params, POSTGRES_IMAGE),
-    )
-
-    el_context = el_contexts[0]
-    el_client_rpc_url = "http://{}:{}/".format(
-        el_context.ip_addr, el_context.rpc_port_num
-    )
-    el_client_name = el_context.client_name
-
-    # Setup verifier port publishing
-    verif_use_nat, verif_nat_ip, verif_public_port, verif_public_ports = setup_port_publishing(
-        port_publisher, additional_service_index, 0
-    )
-    
-    # Configure and launch verifier service
-    config_verif = get_config_verif(
-        global_node_selectors,
-        verif_public_ports,
-        docker_cache_params,
-        blockscout_params,
-    )
-    verif_service_name = "{}-verif".format(SERVICE_NAME_BLOCKSCOUT)
-    verif_service = plan.add_service(verif_service_name, config_verif)
-    
-    # Get verifier URL
-    verif_url = get_service_url(
-        verif_service, 
-        "http", 
-        verif_use_nat, 
-        verif_nat_ip, 
-        verif_public_port
-    )
-    
-    # Setup backend port publishing
-    backend_use_nat, backend_nat_ip, backend_public_port, backend_public_ports = setup_port_publishing(
-        port_publisher, additional_service_index, 1
-    )
-    
-    # Configure and launch backend service
-    config_backend = get_config_backend(
-        postgres_output,
-        el_client_rpc_url,
-        verif_url,
-        el_client_name,
-        global_node_selectors,
-        backend_public_ports,
-        docker_cache_params,
-        blockscout_params,
-    )
-    blockscout_service = plan.add_service(SERVICE_NAME_BLOCKSCOUT, config_backend)
-    plan.print(blockscout_service)
-
-    # Get blockscout URL
-    blockscout_url = get_service_url(
-        blockscout_service, 
-        "http", 
-        backend_use_nat, 
-        backend_nat_ip, 
-        backend_public_port
-    )
-    
-    # Setup frontend port publishing
-    frontend_use_nat, frontend_nat_ip, frontend_public_port, frontend_public_ports = setup_port_publishing(
-        port_publisher, additional_service_index, 2
-    )
-    
-    # Configure and launch frontend service
-    config_frontend = get_config_frontend(
-        plan,
-        el_client_rpc_url,
-        docker_cache_params,
-        blockscout_params,
-        network_params,
-        global_node_selectors,
-        blockscout_service,
-        blockscout_url,
-        frontend_public_ports,
-    )
-    frontend_service = plan.add_service(SERVICE_NAME_FRONTEND, config_frontend)
-    
-    # Return the URL that can be used to access Blockscout
-    return blockscout_url
