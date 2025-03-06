@@ -239,7 +239,7 @@ def get_config_frontend(
             "NEXT_PUBLIC_NETWORK_NAME": network_params.network_name,
             "NEXT_PUBLIC_NETWORK_ID": network_params.network_id,
             "NEXT_PUBLIC_NETWORK_RPC_URL": el_client_rpc_url,
-            "NEXT_PUBLIC_API_HOST": port_publisher.nat_exit_ip + ":" + HTTP_PORT_NUMBER,
+            "NEXT_PUBLIC_API_HOST": port_publisher.nat_exit_ip + ":" + str(HTTP_PORT_NUMBER),
             "NEXT_PUBLIC_AD_BANNER_PROVIDER": "none",
             "NEXT_PUBLIC_AD_TEXT_PROVIDER": "none",
             "NEXT_PUBLIC_IS_TESTNET": "true",
