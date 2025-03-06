@@ -43,7 +43,6 @@ FRONTEND_USED_PORTS = {
     )
 }
 
-
 def setup_port_publishing(port_publisher, service_index, port_offset):
     """Helper function to consistently set up port publishing for services
     
@@ -59,13 +58,17 @@ def setup_port_publishing(port_publisher, service_index, port_offset):
     additional_services_enabled = False
     use_nat_ip = False
     
-    if port_publisher:
-        if "nat_exit_ip" in port_publisher:
-            nat_exit_ip = port_publisher["nat_exit_ip"]
-        
-        if "additional_services" in port_publisher:
-            if "enabled" in port_publisher["additional_services"]:
-                additional_services_enabled = port_publisher["additional_services"]["enabled"]
+    # Safely extract nat_exit_ip if available
+    try:
+        nat_exit_ip = port_publisher.nat_exit_ip
+    except (AttributeError, TypeError):
+        pass
+    
+    # Safely check if additional services are enabled
+    try:
+        additional_services_enabled = port_publisher.additional_services.enabled
+    except (AttributeError, TypeError):
+        pass
     
     use_nat_ip = nat_exit_ip != None and additional_services_enabled
     
@@ -73,10 +76,12 @@ def setup_port_publishing(port_publisher, service_index, port_offset):
     public_ports_config = {}
     
     if use_nat_ip and additional_services_enabled:
-        base_port = 36000
-        if "additional_services" in port_publisher:
-            if "public_port_start" in port_publisher["additional_services"]:
-                base_port = port_publisher["additional_services"]["public_port_start"]
+        # Get the base port safely
+        base_port = 36000  # Default value
+        try:
+            base_port = port_publisher.additional_services.public_port_start
+        except (AttributeError, TypeError):
+            pass
         
         public_port = base_port + service_index + port_offset
         
