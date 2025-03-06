@@ -165,8 +165,8 @@ def get_config_backend(
         protocol="postgresql",
         user=postgres_output.user,
         password=postgres_output.password,
-        hostname=port_publisher.nat_exit_ip,
-        port=32928,
+        hostname=postgres_output.service.hostname,
+        port=postgres_output.port.number,
         database=postgres_output.database,
     )
 
