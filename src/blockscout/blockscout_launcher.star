@@ -110,6 +110,7 @@ def launch_blockscout(
         network_params,
         global_node_selectors,
         blockscout_service,
+        port_publisher
     )
     plan.add_service(SERVICE_NAME_FRONTEND, config_frontend)
     return blockscout_url
@@ -223,6 +224,7 @@ def get_config_frontend(
     network_params,
     node_selectors,
     blockscout_service,
+    port_publisher
 ):
     return ServiceConfig(
         image=shared_utils.docker_cache_image_calc(
@@ -237,7 +239,7 @@ def get_config_frontend(
             "NEXT_PUBLIC_NETWORK_NAME": network_params.network_name,
             "NEXT_PUBLIC_NETWORK_ID": network_params.network_id,
             "NEXT_PUBLIC_NETWORK_RPC_URL": el_client_rpc_url,
-            "NEXT_PUBLIC_API_HOST": "0.0.0.0:{}".format(HTTP_PORT_NUMBER),
+            "NEXT_PUBLIC_API_HOST": port_publisher.nat_exit_ip + ":" + HTTP_PORT_NUMBER,
             "NEXT_PUBLIC_AD_BANNER_PROVIDER": "none",
             "NEXT_PUBLIC_AD_TEXT_PROVIDER": "none",
             "NEXT_PUBLIC_IS_TESTNET": "true",
@@ -245,7 +247,7 @@ def get_config_frontend(
             "NEXT_PUBLIC_HAS_BEACON_CHAIN": "true",
             "NEXT_PUBLIC_NETWORK_VERIFICATION_TYPE": "validation",
             "NEXT_PUBLIC_NETWORK_ICON": "https://ethpandaops.io/logo.png",
-            "NEXT_PUBLIC_APP_HOST": "0.0.0.0",
+            "NEXT_PUBLIC_APP_HOST": port_publisher.nat_exit_ip,
             "NEXT_PUBLIC_APP_PROTOCOL": "http",
             # "NEXT_PUBLIC_APP_HOST": "127.0.0.1",
             "NEXT_PUBLIC_APP_PORT": str(HTTP_PORT_NUMBER_FRONTEND),
