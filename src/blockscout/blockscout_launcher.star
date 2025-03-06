@@ -44,26 +44,40 @@ FRONTEND_USED_PORTS = {
 }
 
 
-def setup_port_publishing(port_publisher, service_index, port_offset=0):
+def setup_port_publishing(port_publisher, service_index, port_offset):
     """Helper function to consistently set up port publishing for services
     
     Args:
         port_publisher: The port publisher configuration
         service_index: The index of the main service
-        port_offset: An offset for the specific component of a service (e.g., 0 for verifier, 1 for backend)
+        port_offset: An offset for the specific component of a service
         
     Returns:
         A tuple with (use_nat_ip, nat_exit_ip, public_port, public_ports_config)
     """
-    nat_exit_ip = port_publisher.get("nat_exit_ip", None)
-    additional_services_enabled = port_publisher.get("additional_services", {}).get("enabled", False)
-    use_nat_ip = nat_exit_ip is not None and additional_services_enabled
+    nat_exit_ip = None
+    additional_services_enabled = False
+    use_nat_ip = False
+    
+    if port_publisher:
+        if "nat_exit_ip" in port_publisher:
+            nat_exit_ip = port_publisher["nat_exit_ip"]
+        
+        if "additional_services" in port_publisher:
+            if "enabled" in port_publisher["additional_services"]:
+                additional_services_enabled = port_publisher["additional_services"]["enabled"]
+    
+    use_nat_ip = nat_exit_ip != None and additional_services_enabled
     
     public_port = None
     public_ports_config = {}
     
     if use_nat_ip and additional_services_enabled:
-        base_port = port_publisher.get("additional_services", {}).get("public_port_start", 36000)
+        base_port = 36000
+        if "additional_services" in port_publisher:
+            if "public_port_start" in port_publisher["additional_services"]:
+                base_port = port_publisher["additional_services"]["public_port_start"]
+        
         public_port = base_port + service_index + port_offset
         
         public_ports_config = {
