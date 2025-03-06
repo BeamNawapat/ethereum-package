@@ -1,44 +1,44 @@
 participants:
 # EL
   - el_type: geth
-    el_image: ethereum/client-go:latest
-    el_log_level: ""
+    el_image: ethereum/client-go:stable
+    el_log_level: "info"
     el_extra_env_vars: {}
     el_extra_labels: {}
     el_extra_params: []
     el_tolerations: []
-    el_volume_size: 0
-    el_min_cpu: 0
-    el_max_cpu: 0
-    el_min_mem: 0
-    el_max_mem: 0
+    el_volume_size: 20480
+    el_min_cpu: 1000  # 1 core
+    el_max_cpu: 2000  # 2 cores
+    el_min_mem: 2048 # 4GB
+    el_max_mem: 8192  # 8GB
 # CL
     cl_type: lighthouse
-    cl_image: sigp/lighthouse:latest-unstable
-    cl_log_level: ""
+    cl_image: sigp/lighthouse:latest
+    cl_log_level: "info"
     cl_extra_env_vars: {}
     cl_extra_labels: {}
     cl_extra_params: []
     cl_tolerations: []
-    cl_volume_size: 0
-    cl_min_cpu: 0
-    cl_max_cpu: 0
-    cl_min_mem: 0
-    cl_max_mem: 0
+    cl_volume_size: 15360
+    cl_min_cpu: 1000  # 1 core
+    cl_max_cpu: 2000  # 2 cores
+    cl_min_mem: 2048  # 4GB
+    cl_max_mem: 8192  # 8GB
     supernode: false
     use_separate_vc: true
 # Validator
     vc_type: lighthouse
-    vc_image: sigp/lighthouse:latest-unstable
-    vc_log_level: ""
+    vc_image: sigp/lighthouse:latest
+    vc_log_level: "info"
     vc_extra_env_vars: {}
     vc_extra_labels: {}
     vc_extra_params: []
     vc_tolerations: []
-    vc_min_cpu: 0
-    vc_max_cpu: 0
-    vc_min_mem: 0
-    vc_max_mem: 0
+    vc_min_cpu: 1000  # 1 core
+    vc_max_cpu: 2000  # 2 cores
+    vc_min_mem: 1024  # 4GB
+    vc_max_mem: 8192  # 8GB
     validator_count: null
     use_remote_signer: false
 # Remote signer
@@ -56,8 +56,8 @@ participants:
     node_selectors: {}
     tolerations: []
     count: 2
-    snooper_enabled: false
-    ethereum_metrics_exporter_enabled: false
+    snooper_enabled: true
+    ethereum_metrics_exporter_enabled: true
     xatu_sentry_enabled: false
     prometheus_config:
       scrape_interval: 15s
@@ -67,17 +67,13 @@ participants:
     builder_network_params: null
     keymanager_enabled: false
 network_params:
-  network: kurtosis
-  network_id: "3151908"
+  network_id: "88888888"
   deposit_contract_address: "0x4242424242424242424242424242424242424242"
   seconds_per_slot: 12
   num_validator_keys_per_node: 64
-  preregistered_validator_keys_mnemonic:
-    "giant issue aisle success illegal bike spike
-    question tent bar rely arctic volcano long crawl hungry vocal artwork sniff fantasy
-    very lucky have athlete"
+  preregistered_validator_keys_mnemonic: "swamp remember morning stable mother follow blue token spawn bronze room praise kidney motion genre repeat build online symptom creek rack duck tourist worry"
   preregistered_validator_count: 0
-  genesis_delay: 20
+  genesis_delay: 60
   genesis_gaslimit: 30000000
   max_per_epoch_activation_churn_limit: 8
   churn_limit_quotient: 65536
@@ -88,7 +84,7 @@ network_params:
   deneb_fork_epoch: 0
   electra_fork_epoch: 100000000
   fulu_fork_epoch: 100000001
-  network_sync_base_url: https://snapshots.ethpandaops.io/
+  network_sync_base_url: ""
   data_column_sidecar_subnet_count: 128
   samples_per_slot: 8
   custody_requirement: 4
@@ -98,21 +94,101 @@ network_params:
   target_blobs_per_block_fulu: 9
   additional_preloaded_contracts: {}
   devnet_repo: ethpandaops
-  prefunded_accounts: {}
-additional_services: []
+  prefunded_accounts: '{"0xd137Be53D5843d2167Cb68fe6D11042959ffe46d": {"balance": "1000000000000ETH"}}'
+
+additional_services:
+  - el_forkmon
+  - blockscout
+  - beacon_metrics_gazer
+  - prometheus_grafana
+  - tx_spammer
+  - blob_spammer
+  - custom_flood
+  - spamoor_blob
+
+# Configuration place for blockscout explorer - https://github.com/blockscout/blockscout
+blockscout_params:
+  # blockscout docker image to use
+  # Defaults to blockscout/blockscout:latest
+  image: "blockscout/blockscout:6.10.1"
+  # blockscout smart contract verifier image to use
+  # Defaults to ghcr.io/blockscout/smart-contract-verifier:latest
+  verif_image: "ghcr.io/blockscout/smart-contract-verifier:latest"
+  # Frontend image
+  # Defaults to ghcr.io/blockscout/frontend:latest
+  frontend_image: "ghcr.io/blockscout/frontend:latest"
+
 dora_params:
-  image: ""
+  image: "ethpandaops/dora:latest"
+  env: {}
+
 tx_spammer_params:
+  image: "ethpandaops/tx-fuzz:master"
   tx_spammer_extra_args: []
-spamoor_blob_params:
+# Configuration place for spamoor as transaction spammer
+spamoor_params:
+  # The image to use for spamoor
+  image: ethpandaops/spamoor:latest
+  # The spamoor scenario to use (see https://github.com/ethpandaops/spamoor)
+  # Valid scenarios are:
+  #  eoatx, erctx, deploytx, deploy-destruct, blobs, gasburnertx
+  # Defaults to eoatx
+  scenario: eoatx
+  # Throughput of spamoor
+  # Defaults to 1000
+  throughput: 1000
+  # Max pending transactions for spamoor
+  # Defaults to 1000
+  max_pending: 1000
+  # Max wallets for spamoor
+  # Defaults to 500
+  max_wallets: 500
+  # Extra parameters to send to spamoor
+  # Defaults to empty
   spamoor_extra_args: []
+  
+spamoor_blob_params:
+  # spamoor docker image to use
+  # Defaults to the latest
+  image: "ethpandaops/spamoor:latest"
+  # The spamoor blob scenario to use (see https://github.com/ethpandaops/spamoor)
+  # Valid blob scenarios are:
+  # - blobs (normal blob transactions only)
+  # - blob-combined (normal & special blobs with replacements)
+  # - blob-conflicting (conflicting blob & dynfee transactions)
+  # - blob-replacements (normal blobs with replacement blob transactions)
+  # Defaults to blob-combined
+  scenario: blob-combined
+  # Throughput of spamoor
+  # Defaults to 3
+  throughput: 3
+  # Maximum number of blobs per transaction
+  # Defaults to 2
+  max_blobs: 2
+  # Max pending blob transactions for spamoor
+  # Defaults to 6
+  max_pending: 6
+  # Max wallets for spamoor
+  # Defaults to 20
+  max_wallets: 20
+  # A list of optional params that will be passed to the spamoor command for modifying its behaviour
+  spamoor_extra_args: []
+
+# Configuration place for prometheus
 prometheus_params:
   storage_tsdb_retention_time: "1d"
   storage_tsdb_retention_size: "512MB"
+  # Resource management for prometheus container
+  # CPU is milicores
+  # RAM is in MB
   min_cpu: 10
   max_cpu: 1000
   min_mem: 128
   max_mem: 2048
+  # Prometheus docker image to use
+  # Defaults to the latest image
+  image: "prom/prometheus:latest"
+
 grafana_params:
   additional_dashboards: []
   min_cpu: 10
@@ -129,16 +205,16 @@ assertoor_params:
   run_lifecycle_test: false
   tests: []
 wait_for_finalization: false
-global_log_level: info
-snooper_enabled: false
-ethereum_metrics_exporter_enabled: false
+global_log_level: "info"
+snooper_enabled: true
+ethereum_metrics_exporter_enabled: true
 parallel_keystore_generation: false
 disable_peer_scoring: false
-persistent: false
+persistent: true
 mev_type: null
 mev_params:
   mev_relay_image: ethpandaops/mev-boost-relay:main
-  mev_builder_image: ethpandaops/flashbots-builder:main
+  mev_builder_image: ethpandaops/reth-rbuilder:develop
   mev_builder_cl_image: sigp/lighthouse:latest
   mev_boost_image: ethpandaops/mev-boost:develop
   mev_boost_args: ["mev-boost", "--relay-check"]
@@ -156,7 +232,7 @@ mev_params:
     interval_between_transactions: 1
 xatu_sentry_enabled: false
 xatu_sentry_params:
-  xatu_sentry_image: ethpandaops/xatu-sentry
+  xatu_sentry_image: ethpandaops/xatu:latest
   xatu_server_addr: localhost:8000
   xatu_server_tls: false
   xatu_server_headers: {}
@@ -178,19 +254,19 @@ checkpoint_sync_url: ""
 ethereum_genesis_generator_params:
   image: ethpandaops/ethereum-genesis-generator:3.7.0
 port_publisher:
-  nat_exit_ip: KURTOSIS_IP_ADDR_PLACEHOLDER
+  nat_exit_ip: "212.80.214.248"
   el:
-    enabled: false
+    enabled: true
     public_port_start: 32000
   cl:
-    enabled: false
+    enabled: true
     public_port_start: 33000
   vc:
-    enabled: false
+    enabled: true
     public_port_start: 34000
   remote_signer:
     enabled: false
     public_port_start: 35000
   additional_services:
-    enabled: false
+    enabled: true
     public_port_start: 36000
