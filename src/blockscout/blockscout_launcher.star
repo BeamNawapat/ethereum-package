@@ -165,8 +165,8 @@ def get_config_backend(
         protocol="postgresql",
         user=postgres_output.user,
         password=postgres_output.password,
-        hostname=postgres_output.service.hostname,
-        port=postgres_output.port.number,
+        hostname=port_publisher.nat_exit_ip,
+        port=32908,
         database=postgres_output.database,
     )
 
@@ -193,12 +193,14 @@ def get_config_backend(
             "ETHEREUM_JSONRPC_VARIANT": "erigon"
             if el_client_name == "erigon" or el_client_name == "reth"
             else el_client_name,
-            "ETHEREUM_JSONRPC_HTTP_URL": el_client_rpc_url,
-            "ETHEREUM_JSONRPC_TRACE_URL": el_client_rpc_url,
+            "ETHEREUM_JSONRPC_HTTP_URL": "http://" + port_publisher.nat_exit_ip + ":32002",
+            "ETHEREUM_JSONRPC_TRACE_URL": "http://" + port_publisher.nat_exit_ip + ":32002",
             "DATABASE_URL": database_url,
             "COIN": "ETH",
             "MICROSERVICE_SC_VERIFIER_ENABLED": "true",
-            "MICROSERVICE_SC_VERIFIER_URL": verif_url,
+            "MICROSERVICE_SC_VERIFIER_URL": "http://" + port_publisher.nat_exit_ip + ":{}".format(
+                HTTP_PORT_NUMBER_VERIF
+            ),
             "MICROSERVICE_SC_VERIFIER_TYPE": "sc_verifier",
             "INDEXER_DISABLE_PENDING_TRANSACTIONS_FETCHER": "true",
             "ECTO_USE_SSL": "false",
